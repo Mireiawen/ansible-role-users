@@ -1,0 +1,18 @@
+---
+## /* vim: set tabstop=2 softtabstop=2 shiftwidth=2 expandtab smarttab autoindent: */
+
+- name: "Enable passwordless sudo"
+  ansible.builtin.lineinfile:
+    path: "/etc/sudoers"
+    state: "present"
+    regexp: "^%sudo"
+    line: "%sudo ALL=(ALL) NOPASSWD: ALL"
+    validate: "visudo -cf %s"
+
+- name: "Keep SSH authentication socket"
+  ansible.builtin.lineinfile:
+    path: "/etc/sudoers"
+    state: "present"
+    regexp: "^[[:space:]]*Defaults[[:space:]]+env_keep[[:space:]]*=[[:space:]]*\"SSH_AUTH_SOCK\""
+    line: "Defaults env_keep += \"SSH_AUTH_SOCK\""
+    validate: "visudo -cf %s"

@@ -1,0 +1,25 @@
+---
+## /* vim: set tabstop=2 softtabstop=2 shiftwidth=2 expandtab smarttab autoindent: */
+
+- name: 'Converge'
+  hosts: 'all'
+  become: true
+  vars:
+    users:
+    - username: 'test1'
+    - username: 'test2'
+      state: 'absent'
+    - username: 'test3'
+      comment: 'Test User'
+      password: 'secret'
+    - username: 'test4'
+      comment: 'Test User'
+      forward: 'root@localhost'
+    - username: 'test5'
+      comment: 'Test User'
+      authorized_keys:
+      - key: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFb/yIa3xAeQV2fnZLks5zPUX1SQv0xN0zBW1MR8s8qQ'
+        state: 'absent'
+
+  roles:
+  - role: 'mireiawen.users'

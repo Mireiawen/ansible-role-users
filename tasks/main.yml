@@ -1,0 +1,16 @@
+---
+## /* vim: set tabstop=2 softtabstop=2 shiftwidth=2 expandtab smarttab autoindent: */
+
+- name: "Configure sudo"
+  ansible.builtin.include_tasks: "sudo.yml"
+  when:
+  - "users_sudo | default(true)"
+
+- name: "Set up the users"
+  ansible.builtin.include_tasks: "user.yml"
+  loop: "{{ users }}"
+  loop_control:
+    label: "{{ user.username }}"
+    loop_var: "user"
+  when:
+  - "users is defined"

@@ -1,0 +1,65 @@
+---
+## /* vim: set tabstop=2 softtabstop=2 shiftwidth=2 expandtab smarttab autoindent: */
+
+- name: "Make sure the group exists for {{ user.username | mandatory }}"
+  ansible.builtin.group:
+    name: "{{ user.group | default(user.username) }}"
+    state: "present"
+
+- name: "Create the user for {{ user.username | mandatory }}"
+  ansible.builtin.user:
+    name: "{{ user.username | mandatory }}"
+    comment: "{{ user.realname | default(user.username) }}"
+    password: "{{ user.password | default('!') }}"
+    update_password: "{{ user.update_password | default('on_create') }}"
+    shell: "{{ user.shell | default('/bin/bash') }}"
+    group: "{{ user.group | default(user.username) }}"
+    groups: "{{ user.groups | default([]) | difference(host_ignore_user_groups | default([])) }}"
+    system: "{{ user.system | default(false) | bool }}"
+    state: "{{ user.state | default('present') }}"
+
+- name: "Create the mail forward for {{ user.username | mandatory }}"
+  ansible.builtin.template:
+    src: "forward"
+    dest: "/home/{{ user.username | mandatory }}/.forward"
+    owner: "{{ user.username | mandatory }}"
+    group: "{{ user.group | default(user.username) }}"
+    mode: "u=rw,go=r"
+  when:
+  - "user.forward is defined"
+
+- name: "Add the authorized SSH keys for {{ user.username | mandatory }}"
+  ansible.posix.authorized_key:
+    user: "{{ user.username | mandatory }}"
+    key: "{{ item.key }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ user.authorized_keys }}"
+  loop_control:
+    label: "{{ item.name | default('') }}"
+  when:
+  - "user.authorized_keys is defined"
+
+- name: "Add the SSH key files for {{ user.username | mandatory }}"
+  ansible.builtin.include_tasks: "sshkey.yml"
+  loop: "{{ user.private_keys }}"
+  loop_control:
+    label: "{{ item.name | default('') }}"
+  when:
+  - "user.private_keys_path is defined"
+  - "user.ssh_keys is defined"
+
+- name: "Clone the repositories for {{ user.username | mandatory }}"
+  ansible.builtin.include_tasks: "repo.yml"
+  loop: "{{ user.repositories }}"
+  loop_control:
+    label: "{{ item.repo }}"
+  when:
+  - "user.repositories is defined"
+
+- name: "Set up the dotfiles for {{ user.username | mandatory }}"
+  ansible.builtin.include_tasks: "dotfiles.yml"
+  loop: "{{ user.dotfiles }}"
+  when:
+  - "user.dotfiles is defined"
+  - "user.dotsource is defined"
+  - "user.dotdest is defined"

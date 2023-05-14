@@ -1,0 +1,32 @@
+---
+## /* vim: set tabstop=2 softtabstop=2 shiftwidth=2 expandtab smarttab autoindent: */
+
+- name: "Make sure the SSH key directory exists"
+  ansible.builtin.file:
+    path: "{{ user.private_keys_path | mandatory }}"
+    state: "directory"
+    owner: "{{ user.username | mandatory }}"
+    group: "{{ user.group | default(user.username) }}"
+    mode: "u=rwx,go="
+  when:
+  - "user.private_keys_path is defined"
+
+- name: "Add the public key {{ item.name | mandatory }}"
+  ansible.builtin.copy:
+    dest: "{{ user.private_keys_path | mandatory }}/{{ item.name }}.pub"
+    content: "{{ item.public | mandatory }}"
+    owner: "{{ user.username | mandatory }}"
+    group: "{{ user.group | default(user.username) }}"
+    mode: "u=rw,go=r"
+  when:
+  - "item.public is defined"
+
+- name: "Add the private key {{ item.name | mandatory }}"
+  ansible.builtin.copy:
+    dest: "{{ user.private_keys_path | mandatory }}/{{ item.name }}"
+    content: "{{ item.private | mandatory }}"
+    owner: "{{ user.username | mandatory }}"
+    group: "{{ user.group | default(user.username) }}"
+    mode: "u=rw,go="
+  when:
+  - "item.private is defined"
