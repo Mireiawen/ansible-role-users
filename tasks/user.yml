@@ -1,12 +1,14 @@
 ---
 ## /* vim: set tabstop=2 softtabstop=2 shiftwidth=2 expandtab smarttab autoindent: */
 
-- name: "Make sure the group exists for {{ user.username | mandatory }}"
+- name: "Make sure the group for the user exists - {{ user.username }}"
   ansible.builtin.group:
     name: "{{ user.group | default(user.username) }}"
     state: "present"
+  when:
+  - "user.state | default('present') == 'present'"
 
-- name: "Create the user for {{ user.username | mandatory }}"
+- name: "Update the user - {{ user.username }}"
   ansible.builtin.user:
     name: "{{ user.username | mandatory }}"
     comment: "{{ user.realname | default(user.username) }}"
@@ -15,51 +17,84 @@
     shell: "{{ user.shell | default('/bin/bash') }}"
     group: "{{ user.group | default(user.username) }}"
     groups: "{{ user.groups | default([]) | difference(host_ignore_user_groups | default([])) }}"
+    append: "{{ user.append_groups | default(false) }}"
     system: "{{ user.system | default(false) | bool }}"
+    # linter can't seem to be able to parse the state expression
+    # noqa: args[module]
     state: "{{ user.state | default('present') }}"
+  register: "user_info"
 
-- name: "Create the mail forward for {{ user.username | mandatory }}"
+- name: "Get the user home dir"
+  ansible.builtin.set_fact:
+    user_home: "{{ user_info.home }}"
+  when:
+  - "user.state | default('present') == 'present'"
+
+- name: "Remove the group for the user - {{ user.username }}"
+  ansible.builtin.group:
+    name: "{{ user.group | default(user.username) }}"
+    state: "absent"
+  when:
+  - "user.state | default('present') == 'absent'"
+
+- name: "Create the mail forward for the user - {{ user.username }}"
   ansible.builtin.template:
     src: "forward"
-    dest: "/home/{{ user.username | mandatory }}/.forward"
+    dest: "{{ user_home }}/.forward"
     owner: "{{ user.username | mandatory }}"
     group: "{{ user.group | default(user.username) }}"
     mode: "u=rw,go=r"
   when:
   - "user.forward is defined"
+  - "user.state | default('present') == 'present'"
 
-- name: "Add the authorized SSH keys for {{ user.username | mandatory }}"
+- name: "Add the authorized SSH keys for the user - {{ user.username }}"
   ansible.posix.authorized_key:
     user: "{{ user.username | mandatory }}"
-    key: "{{ item.key }}"
+    key: "{{ lookup('ansible.builtin.file', item.key, lstrip=False, rstrip=False) }}"
+    # linter can't seem to be able to parse the state expression
+    # noqa: args[module]
     state: "{{ item.state | default('present') }}"
   loop: "{{ user.authorized_keys }}"
   loop_control:
     label: "{{ item.name | default('') }}"
   when:
   - "user.authorized_keys is defined"
+  - "user.state | default('present') == 'present'"
 
-- name: "Add the SSH key files for {{ user.username | mandatory }}"
+- name: "Make sure the SSH key directory exists - {{ user.username }}"
+  ansible.builtin.file:
+    path: "{{ user_home }}/.ssh"
+    state: "directory"
+    owner: "{{ user.username | mandatory }}"
+    group: "{{ user.group | default(user.username) }}"
+    mode: "u=rwx,go="
+  when:
+  - "user.state | default('present') == 'present'"
+
+- name: "Add the SSH keys for the user - {{ user.username }}"
   ansible.builtin.include_tasks: "sshkey.yml"
   loop: "{{ user.private_keys }}"
   loop_control:
     label: "{{ item.name | default('') }}"
   when:
-  - "user.private_keys_path is defined"
-  - "user.ssh_keys is defined"
+  - "user.private_keys is defined"
+  - "user.state | default('present') == 'present'"
 
-- name: "Clone the repositories for {{ user.username | mandatory }}"
+- name: "Clone the repositories for the user - {{ user.username }}"
   ansible.builtin.include_tasks: "repo.yml"
   loop: "{{ user.repositories }}"
   loop_control:
     label: "{{ item.repo }}"
   when:
   - "user.repositories is defined"
+  - "user.state | default('present') == 'present'"
 
-- name: "Set up the dotfiles for {{ user.username | mandatory }}"
+- name: "Set up the dotfiles for the user - {{ user.username }}"
   ansible.builtin.include_tasks: "dotfiles.yml"
   loop: "{{ user.dotfiles }}"
+  loop_control:
+    label: "{{ item.file }}"
   when:
   - "user.dotfiles is defined"
-  - "user.dotsource is defined"
-  - "user.dotdest is defined"
+  - "user.state | default('present') == 'present'"

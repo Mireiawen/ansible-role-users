@@ -18,8 +18,40 @@
     - username: 'test5'
       comment: 'Test User'
       authorized_keys:
-      - key: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFb/yIa3xAeQV2fnZLks5zPUX1SQv0xN0zBW1MR8s8qQ'
+      - key: 'molecule/default/keys/test-key.pub'
         state: 'absent'
+    - username: 'test6'
+      comment: 'Test User'
+      private_keys:
+      - name: 'test-key'
+        public: 'molecule/default/keys/test-key.pub'
+        private: 'molecule/default/keys/test-key'
+    - username: 'fulldemo'
+      comment: 'Demo User'
+      password: 'really-secret-demo-password-1!'
+      shell: '/bin/bash'
+      append: true
+      forward: 'demo@example.tld'
+      authorized_keys:
+      - key: 'molecule/default/keys/test-key.pub'
+      private_keys:
+      - name: 'test-key'
+        public: 'molecule/default/keys/test-key.pub'
+        private: 'molecule/default/keys/test-key'
+      repositories:
+      - repo: 'https://github.com/orennu/git-demo.git'
+        dest: '/home/fulldemo/git-demo'
+      dotfiles:
+      - source: '/home/fulldemo/git-demo'
+        dest: '/home/fulldemo'
+        file: 'test-file.txt'
+
+  pre_tasks:
+  - name: 'Make sure we have git'
+    ansible.builtin.package:
+      name: 'git'
+      state: 'present'
+      update_cache: true
 
   roles:
   - role: 'mireiawen.users'

@@ -1,10 +1,10 @@
 ---
 ## /* vim: set tabstop=2 softtabstop=2 shiftwidth=2 expandtab smarttab autoindent: */
 
-- name: "Link the {{ item }}"
+- name: "Link the dotfile"
   ansible.builtin.file:
-    src: "{{ user.dotsource | mandatory }}/{{ item }}"
-    dest: "{{ user.dotdest | mandatory }}/{{ item }}"
+    src: "{{ item.source | mandatory }}/{{ item.file }}"
+    dest: "{{ item.dest | mandatory }}/{{ item.file }}"
     owner: "{{ user.username | mandatory }}"
     group: "{{ user.group | default(user.username) }}"
     force: true
